@@ -1,12 +1,7 @@
-from drf_spectacular.utils import extend_schema_field, OpenApiTypes
 from rest_framework import serializers
 from .models import LostFoundItem
 
 class LostFoundItemSerializer(serializers.ModelSerializer):
-    @extend_schema_field(OpenApiTypes.BINARY)
-    def image(self):
-        return self.fields['image']
-
     class Meta:
         model = LostFoundItem
         fields = '__all__'

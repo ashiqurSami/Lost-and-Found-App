@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 
 # Create your models here.
@@ -27,3 +28,8 @@ class LostFoundItem(models.Model):
 
     def __str__(self):
         return f'{self.name} - {self.status.upper()}'
+
+    class Meta:
+        indexes=[
+            GinIndex(fields=['name', 'description', 'location', 'category'])
+        ]
