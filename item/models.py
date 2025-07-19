@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.contrib.postgres.indexes import GinIndex
+from django.contrib.gis.db import models as geomodels
 from django.db import models
 
 # Create your models here.
@@ -20,7 +20,8 @@ class LostFoundItem(models.Model):
     name=models.CharField(max_length=255)
     category=models.CharField(max_length=100)
     description=models.TextField()
-    location=models.CharField(max_length=255)
+    location=models.CharField(max_length=255,blank=True)
+    point = geomodels.PointField(geography=True, blank=True, null=True)
     image=models.ImageField(upload_to='item/images/')
     date=models.DateField()
     status=models.CharField(max_length=5,choices=STATUS_CHOICES)
@@ -28,8 +29,3 @@ class LostFoundItem(models.Model):
 
     def __str__(self):
         return f'{self.name} - {self.status.upper()}'
-
-    class Meta:
-        indexes=[
-            GinIndex(fields=['name', 'description', 'location', 'category'])
-        ]
