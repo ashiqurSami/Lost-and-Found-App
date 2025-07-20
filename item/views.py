@@ -1,11 +1,14 @@
+from datetime import timedelta
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.measure import D
 from django.contrib.gis.geos import Point
 from django.shortcuts import render
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, permissions, filters
-from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
+from rest_framework.response import Response
+from rest_framework import viewsets, permissions, filters, status
+from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector, TrigramSimilarity
 from rest_framework.exceptions import PermissionDenied, ParseError
+from rest_framework.views import APIView
 from item.models import LostFoundItem
 from .filter import LostFoundItemFilter
 from item.serializers import LostFoundItemSerializer
@@ -37,7 +40,7 @@ class LostFoundItemViewSet(viewsets.ModelViewSet):
             except ValueError:
                 raise ParseError("Invalid geolocation or radius.")
 
-        #full-text search
+        # full-text search
         search_query = self.request.query_params.get('search')
         if search_query:
             vector = SearchVector('name', 'description', 'category', 'location', config='english')
@@ -73,3 +76,41 @@ class LostFoundItemViewSet(viewsets.ModelViewSet):
         if serializer.instance.user != self.request.user:
             raise PermissionDenied("You do not have permission to edit this item.")
         serializer.save()
+
+
+class MatchFoundItemView(APIView):
+    permission_classes = (permissions.AllowAny, )
+
+    def get(self,request,lost_item_id):
+        try:
+            lost_item=LostFoundItem.objects.get(id=lost_item_id,status='lost')
+        except LostFoundItem.DoesNotExist:
+            return Response({"error": "Lost item not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # calculate date range ±3 days
+        start_date = lost_item.date - timedelta(days=3)
+        end_date = lost_item.date + timedelta(days=3)
+
+        # Base queryset: all found items with same category and date range
+        queryset =  LostFoundItem.objects.filter(
+            status='found',
+            category=lost_item.category,
+            date__range=(start_date, end_date)
+        )
+
+        # location based filtering
+        if lost_item.point:
+            queryset = queryset.annotate(
+                distance=Distance('point',lost_item.point)
+            ).filter(distance__lte=D(km=3))  # 3 km radius
+
+        # trigram similarity on name and description
+        queryset = queryset.annotate(
+            name_sim = TrigramSimilarity('name', lost_item.name),
+            desc_sim = TrigramSimilarity('description', lost_item.description),
+        ).annotate(
+            total_sim=F('name_sim')+F('desc_sim')
+        ).order_by('-total_sim','-date')[:5]
+
+        serializer = LostFoundItemSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
