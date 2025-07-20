@@ -23,7 +23,7 @@ A Django REST Framework-based backend API for tracking and managing lost and fou
 
 - **Backend:** Django 5.x, Django REST Framework
 - **Real-time:** Django Channels + Redis
-- **Database:** PostgreSQL + PostGIS + pg_trgm
+- **Database:** PostgreSQL + PostGIS + Postgres Trigram
 - **Auth:** JWT (SimpleJWT)
 - **API Docs:** drf-spectacular
 - **Image Handling:** Django ImageField
