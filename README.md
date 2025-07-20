@@ -34,7 +34,7 @@ A Django REST Framework-based backend API for tracking and managing lost and fou
 
 ```bash
 git clone https://github.com/yourusername/lost-found-api.git
-cd Lost-AMD-Found-App
+cd Lost-and-Found-App
 virtualenv .env
 source .env/bin/activate
 pip install -r requirements.txt
